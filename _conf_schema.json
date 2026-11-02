@@ -1,0 +1,62 @@
+{
+  "enabled": {
+    "type": "bool",
+    "default": true,
+    "description": "总开关"
+  },
+  "target_umo": {
+    "type": "string",
+    "default": "",
+    "description": "发到哪个会话（AstrBot 的 unified_msg_origin，形如 「平台:FriendMessage:QQ号」）。必填，空着插件不会发任何东西"
+  },
+  "extra_umos": {
+    "type": "list",
+    "default": [],
+    "description": "额外还要发给谁（同一个人的每一条都会收到，各自独立）"
+  },
+  "quiet_hours": {
+    "type": "string",
+    "default": "23:00-09:00",
+    "description": "静默时段：这段时间只存不发。留空 = 从不静默"
+  },
+  "report_dir": {
+    "type": "string",
+    "default": "",
+    "description": "报告目录（里面是 <YYYY-MM-DD>.md）。留空 = 用 $DSH_HOME/douyin-duty/out"
+  },
+  "lookback_days": {
+    "type": "int",
+    "default": 1,
+    "description": "往前看几天。1 = 昨天+今天（跨午夜补发用）；0 = 只看今天"
+  },
+  "poll_seconds": {
+    "type": "int",
+    "default": 600,
+    "description": "多久检查一次报告（秒）"
+  },
+  "max_items": {
+    "type": "int",
+    "default": 3,
+    "description": "一次最多聊几条（剩下的下一轮继续发）"
+  },
+  "auto_send": {
+    "type": "bool",
+    "default": true,
+    "description": "真发。关掉只生成不发（先看措辞用，日志里能看到生成结果）"
+  },
+  "chat_provider_id": {
+    "type": "string",
+    "default": "",
+    "description": "用哪个对话模型，空则用当前默认"
+  },
+  "persona_path": {
+    "type": "string",
+    "default": "",
+    "description": "人设文件路径（txt，UTF-8）。留空则用下面的 persona_text"
+  },
+  "persona_text": {
+    "type": "text",
+    "default": "",
+    "description": "人设正文，直接粘贴。persona_path 读不到时用这个；两个都空就用中性兜底"
+  }
+}

@@ -1,0 +1,6 @@
+name: astrbot_plugin_douyin_bridge
+display_name: 抖音日报桥
+desc: 把本地抖音值班报告里「值得看」段的条目，按人设转述成口语消息，定时私聊推送到 QQ。23:00–09:00 只存不发，静默结束后连同昨晚没发完的一起补发。
+help: 管理员发送「抖音日报推送」立刻推一轮；发送「抖音日报状态」查看读取窗口、待发条数和人设来源
+version: v0.2.0
+author: Direction-light

@@ -1,0 +1,2 @@
+# 统一用 LF 存库，Windows 检出也不至于把 README 弄成 CRLF
+* text=auto eol=lf
