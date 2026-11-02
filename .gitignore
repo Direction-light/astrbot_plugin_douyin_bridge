@@ -9,3 +9,7 @@ venv/
 data/
 sent.json
 *.log
+
+# 本地代理/加速工具的 CA 证书（只在本机生效，绝不进仓库）
+.certs/
+*.pem
