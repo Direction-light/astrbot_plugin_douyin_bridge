@@ -103,6 +103,7 @@ git clone https://github.com/Direction-light/astrbot_plugin_douyin_bridge.git
 | `quiet_hours` | `23:00-09:00` | 静默时段，只存不发。留空 = 从不静默。支持跨午夜区间 |
 | `report_dir` | 空 | 报告目录。空 = `$DSH_HOME/douyin-duty/out` |
 | `lookback_days` | `1` | 往前看几天。`1` = 昨天+今天（**跨午夜补发靠它**）；`0` = 只看今天；上限 7 |
+| `history_days` | `14` | 记住最近发过的话，避免每天说辞雷同。保留几天；`0` = 关闭 |
 | `poll_seconds` | `600` | 多久检查一次报告，最小 60 |
 | `max_items` | `3` | 一次最多聊几条，剩下的下一轮继续 |
 | `auto_send` | `true` | 关掉就只生成不发送，生成结果写日志 |
@@ -136,6 +137,29 @@ git clone https://github.com/Direction-light/astrbot_plugin_douyin_bridge.git
 - 同一条视频被**不同轮次**推荐，会发两遍 —— 那是两次独立推荐，算新内容
 - 记录保留 30 天，自动清理
 
+## 别复读（推送历史）
+
+`sent.json` 只解决「同一条视频别发两遍」，解决不了「**话**别说得一模一样」——
+视频换了，措辞还是一个模子，接受方照样觉得是复读机。
+
+所以插件还会在 `history.json` 里记下**最近几次真正发出去的原话**，并在下次调模型时一并带上：
+
+```
+你之前已经跟对方说过这些：
+- 2026-10-31　老婆婆，那条讲记忆的别硬堆上下文，忘了反而像活着
+- 2026-11-01　早，昨天说的做饭那个你试了没，别又糊弄
+
+（上面这些是你之前已经跟对方说过的。别再重复同样的说法和同样的开场，
+对方会觉得你在念稿。今天的这几条要换个讲的由头。）
+```
+
+- 默认保留 **14 天**，只把最近 **5 条**喂给模型，单条截到 **200 字**，提示词不会无限膨胀
+- **只有真发出去才记**：`auto_send` 关着、或者发送失败，都不进历史
+- `history_days` 设成 `0` 就完全关掉，行为和没有这个功能时一致
+- 「抖音日报状态」会显示当前历史条数
+
+这条历史由插件自己维护，**不读你的聊天记录**，也不会把 QQ 里的日常对话带进推送。
+
 ## 指令
 
 | 指令 | 权限 | 作用 |
@@ -164,6 +188,7 @@ python -m pytest -q
 | `core/clock.py` | 静默时段判定、发送窗口（`report_days`） |
 | `core/report.py` | 解析 Markdown、跨天合并去重（`merge_reports` / `read_reports`） |
 | `core/persona.py` | 人设三层降级（`resolve_persona`） |
+| `core/history.py` | 推送历史，防止每天说辞雷同（`PushHistory`） |
 | `core/compose.py` | 拼提示词、切消息 |
 | `core/sentlog.py` | 已发送记录 |
 

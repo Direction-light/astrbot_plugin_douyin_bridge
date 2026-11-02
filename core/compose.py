@@ -23,6 +23,14 @@ PROMPT_TEMPLATE = """{persona}
 - 如果有「一句话」这种现成的总结，可以用来参考，但别照抄
 """
 
+# 历史单独成段，且明确写成"已经说过" —— 它是用来避开的，不是素材。
+HISTORY_TEMPLATE = """
+{history}
+
+（上面这些是你之前已经跟对方说过的。别再重复同样的说法和同样的开场，
+对方会觉得你在念稿。今天的这几条要换个讲的由头。）
+"""
+
 
 def format_item(index: int, item: DutyItem) -> str:
     bits: list[str] = []
@@ -40,13 +48,36 @@ def format_item(index: int, item: DutyItem) -> str:
     return f"{index}. {body}"
 
 
-def build_prompt(items: list[DutyItem], persona: str, max_items: int = 3) -> str:
+def format_history(history: list[dict]) -> str:
+    """`[{"at": ..., "text": ...}]` -> 每行一条，带日期。"""
+    lines: list[str] = []
+    for entry in history:
+        text = str(entry.get("text") or "").strip()
+        if not text:
+            continue
+        stamp = str(entry.get("at") or "")[:10]
+        lines.append(f"- {stamp}　{text}" if stamp else f"- {text}")
+    if not lines:
+        return ""
+    return "你之前已经跟对方说过这些：\n" + "\n".join(lines)
+
+
+def build_prompt(
+    items: list[DutyItem],
+    persona: str,
+    max_items: int = 3,
+    history: list[dict] | None = None,
+) -> str:
     body = "\n\n".join(format_item(i + 1, it) for i, it in enumerate(items[:max_items]))
-    return PROMPT_TEMPLATE.format(
+    prompt = PROMPT_TEMPLATE.format(
         persona=(persona or "").strip(),
         items=body,
         max_items=max_items,
     )
+    seen = format_history(history or [])
+    if not seen:
+        return prompt
+    return prompt + HISTORY_TEMPLATE.format(history=seen)
 
 
 def split_messages(text: str, max_msgs: int = 3) -> list[str]:

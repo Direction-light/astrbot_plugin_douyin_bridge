@@ -29,6 +29,11 @@
     "default": 1,
     "description": "往前看几天。1 = 昨天+今天（跨午夜补发用）；0 = 只看今天"
   },
+  "history_days": {
+    "type": "int",
+    "default": 14,
+    "description": "记住最近发过的话，防止每天说辞雷同。保留几天；0 = 关闭这个功能"
+  },
   "poll_seconds": {
     "type": "int",
     "default": 600,

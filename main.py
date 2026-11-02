@@ -25,6 +25,7 @@ from astrbot.core import AstrBotConfig
 
 from .core.clock import can_send, in_quiet, report_days
 from .core.compose import build_prompt, split_messages
+from .core.history import PushHistory
 from .core.persona import SOURCE_FALLBACK, SOURCE_PATH, SOURCE_TEXT, resolve_persona
 from .core.report import read_reports
 from .core.sentlog import SentLog
@@ -32,6 +33,7 @@ from .core.sentlog import SentLog
 PLUGIN_DATA = "douyin_bridge"
 DEFAULT_QUIET = "23:00-09:00"
 DEFAULT_LOOKBACK = 1
+DEFAULT_HISTORY_DAYS = 14
 
 _SOURCE_LABEL = {
     SOURCE_PATH: "人设文件",
@@ -71,6 +73,10 @@ class DouyinBridge(Star):
         except OSError:
             logger.exception("[douyin-bridge] 数据目录建不出来，去重会失效")
         self.sent = SentLog(self.data_dir / "sent.json")
+        self.history = PushHistory(
+            self.data_dir / "history.json",
+            keep_days=self._history_days(),
+        )
         self._task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
         self._persona_cache: tuple[str, str] | None = None
@@ -129,6 +135,13 @@ class DouyinBridge(Star):
             return int(self.config.get("lookback_days", DEFAULT_LOOKBACK))
         except (TypeError, ValueError):
             return DEFAULT_LOOKBACK
+
+    def _history_days(self) -> int:
+        """推送历史保留几天。0 = 关掉「别复读」这个功能。"""
+        try:
+            return int(self.config.get("history_days", DEFAULT_HISTORY_DAYS))
+        except (TypeError, ValueError):
+            return DEFAULT_HISTORY_DAYS
 
     def _report_dir(self) -> Path:
         raw = str(self.config.get("report_dir") or "").strip()
@@ -204,7 +217,8 @@ class DouyinBridge(Star):
                 logger.warning("[douyin-bridge] 找不到对话模型，跳过")
                 return 0
             persona, source = self._persona()
-            prompt = build_prompt(batch, persona, cap)
+            history = self.history.recent()
+            prompt = build_prompt(batch, persona, cap, history=history)
             try:
                 resp = await provider.text_chat(prompt, session_id="douyin-bridge")
                 text = getattr(resp, "completion_text", "") or ""
@@ -237,6 +251,8 @@ class DouyinBridge(Star):
                 logger.warning("[douyin-bridge] 一条都没发出去，标记延后重试")
                 return 0
             self.sent.mark([it.key for it in batch])
+            # 只有真发出去了才记进历史 —— 没发的话不算"说过"
+            self.history.add("\n".join(msgs), [it.aweme_id for it in batch])
             logger.info(
                 "[douyin-bridge] 已推送 %d 条消息（%d 个视频）到 %d 个会话｜人设来源=%s",
                 delivered,
@@ -259,12 +275,19 @@ class DouyinBridge(Star):
         # 注意：这里的换行缩进要单独算变量，不能写进 f-string 的表达式里
         # —— 反斜杠进 f-string 的 {...} 只有 Python 3.12+ 允许。
         targets = "\n      ".join(self._target_umos()) or "未配置"
+        history = self.history.recent()
+        hist_line = (
+            f"推送历史：{len(history)} 条（保留 {self._history_days()} 天）"
+            if self._history_days() > 0
+            else "推送历史：已关闭"
+        )
         yield event.plain_result(
             f"窗口：{days[0]} ~ {days[-1]}（{len(days)} 天）\n"
             f"值得看：{len(items)} 条，其中 {len(pending)} 条没发\n"
             f"现在：{state}（静默 {quiet}）\n"
             f"报告目录：{self._report_dir()}\n"
             f"人设来源：{_SOURCE_LABEL.get(source, source)}\n"
+            f"{hist_line}\n"
             f"目标：{targets}"
         )
 
